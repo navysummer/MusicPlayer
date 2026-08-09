@@ -1,0 +1,7 @@
+node_modules/
+dist/
+src-tauri/target/
+*.lock
+*.log
+.DS_Store
+save_music.txt
