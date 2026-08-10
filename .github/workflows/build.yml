@@ -15,6 +15,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   NODE_VERSION: "22"
+  npm_config_confirm_modules_purge: "false"
 
 jobs:
   # ── Desktop builds (Windows / macOS / Linux, x64 + arm64) ──────

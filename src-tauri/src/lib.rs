@@ -52,6 +52,7 @@ async fn open_media(state: tauri::State<'_, AppState>, uri: String) -> Result<Me
 }
 
 #[tauri::command]
+#[cfg(desktop)]
 async fn open_file_dialog(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let files = app
         .dialog()
@@ -76,6 +77,13 @@ async fn open_file_dialog(app: tauri::AppHandle) -> Result<Vec<String>, String> 
 }
 
 #[tauri::command]
+#[cfg(not(desktop))]
+async fn open_file_dialog() -> Result<Vec<String>, String> {
+    Err("当前平台暂不支持文件选择".to_string())
+}
+
+#[tauri::command]
+#[cfg(desktop)]
 async fn open_folder_dialog(app: tauri::AppHandle) -> Result<Option<String>, String> {
     let dir = app
         .dialog()
@@ -86,6 +94,12 @@ async fn open_folder_dialog(app: tauri::AppHandle) -> Result<Option<String>, Str
         Some(d) => Ok(d.as_path().map(|p| p.to_string_lossy().to_string())),
         None => Ok(None),
     }
+}
+
+#[tauri::command]
+#[cfg(not(desktop))]
+async fn open_folder_dialog() -> Result<Option<String>, String> {
+    Err("当前平台暂不支持选择文件夹".to_string())
 }
 
 #[tauri::command]
