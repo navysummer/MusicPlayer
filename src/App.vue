@@ -2,6 +2,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import UrlModal from "./components/UrlModal.vue";
+import SettingsModal from "./components/SettingsModal.vue";
 import Toast from "./components/Toast.vue";
 
 const audioEl = ref(null);
@@ -16,6 +17,7 @@ const loadingVisible = ref(false);
 const loadingText = ref("正在解析音频…");
 
 const urlModalOpen = ref(false);
+const settingsOpen = ref(false);
 const toastVisible = ref(false);
 const toastMsg = ref("");
 const toastIsErr = ref(false);
@@ -611,6 +613,10 @@ onBeforeUnmount(() => {
           <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>
           打开文件夹
         </button>
+        <button class="tbtn ghost" title="设置" @click="settingsOpen = true">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 8.5A3.5 3.5 0 1 0 12 15.5 3.5 3.5 0 0 0 12 8.5Zm7.4 3.5c0-.6-.05-1.1-.15-1.6l2-1.55-2-3.4-2.35.95a7.4 7.4 0 0 0-2.7-1.55L14 1h-4l-.2 2.4a7.4 7.4 0 0 0-2.7 1.55l-2.35-.95-2 3.4 2 1.55c-.1.5-.15 1-.15 1.6s.05 1.1.15 1.6l-2 1.55 2 3.4 2.35-.95a7.4 7.4 0 0 0 2.7 1.4L10 24h4l.2-2.4a7.4 7.4 0 0 0 2.7-1.4l2.35.95 2-3.4-2-1.55c.1-.5.15-1.1.15-1.6Z"/></svg>
+          关于
+        </button>
       </div>
     </header>
 
@@ -768,6 +774,7 @@ onBeforeUnmount(() => {
 
     <!-- modals & toast -->
     <UrlModal :open="urlModalOpen" @close="urlModalOpen = false" @submit="onUrlSubmit" />
+    <SettingsModal :open="settingsOpen" @close="settingsOpen = false" />
     <Toast :message="toastMsg" :is-err="toastIsErr" :visible="toastVisible" />
   </div>
 </template>

@@ -6,6 +6,7 @@ use metadata::AudioMetadata;
 use serde::Serialize;
 use std::sync::Mutex;
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_opener::OpenerExt;
 
 struct AppState {
     stream_server: Mutex<stream::StreamServer>,
@@ -156,6 +157,14 @@ async fn scan_folder(path: String) -> Result<Vec<String>, String> {
     Ok(files)
 }
 
+#[tauri::command]
+async fn open_external(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    app.opener()
+        .open_url(&url, None::<String>)
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 fn urlencoding(s: &str) -> String {
     let mut result = String::new();
     for byte in s.bytes() {
@@ -189,6 +198,7 @@ pub fn run() {
             get_metadata,
             load_lrc,
             scan_folder,
+            open_external,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
