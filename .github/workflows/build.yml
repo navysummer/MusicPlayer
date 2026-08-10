@@ -61,9 +61,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - name: Enable pnpm
-        shell: bash
-        run: corepack enable pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -141,9 +142,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - name: Enable pnpm
-        shell: bash
-        run: corepack enable pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -200,9 +202,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
 
-      - name: Enable pnpm
-        shell: bash
-        run: corepack enable pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
