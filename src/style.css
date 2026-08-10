@@ -1175,6 +1175,108 @@ input[type="range"] {
   font-family: var(--font);
 }
 
+/* Update check */
+.update-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.version-tag {
+  font-size: 13px;
+  color: var(--text);
+  background: rgba(201, 162, 95, 0.12);
+  border: 1px solid var(--stroke);
+  padding: 6px 14px;
+  border-radius: 999px;
+  letter-spacing: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.update-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  letter-spacing: 1px;
+  background: var(--panel);
+  border: 1px solid var(--stroke-strong);
+  color: var(--text-dim);
+}
+
+.update-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: rgba(219, 181, 121, 0.1);
+}
+
+.update-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.mini-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 235, 200, 0.2);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+.update-result {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 12px 14px;
+  border-radius: 12px;
+  letter-spacing: 1px;
+}
+
+.update-result.update {
+  background: rgba(111, 155, 138, 0.1);
+  border: 1px solid rgba(111, 155, 138, 0.3);
+  color: #9cc4b4;
+}
+
+.update-result.ok {
+  background: rgba(111, 155, 138, 0.1);
+  border: 1px solid rgba(111, 155, 138, 0.3);
+  color: #9cc4b4;
+}
+
+.update-result.err {
+  background: rgba(176, 86, 74, 0.1);
+  border: 1px solid rgba(176, 86, 74, 0.35);
+  color: #e0a08f;
+}
+
+.update-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.update-actions button {
+  padding: 7px 16px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  letter-spacing: 1px;
+}
+
+.update-actions button.primary {
+  background: var(--grad);
+  color: #221407;
+}
+
+.update-actions button.ghost {
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  color: var(--text-dim);
+}
+
+.update-actions button.ghost:hover {
+  color: var(--text);
+}
+
 /* ============ Toast ============ */
 .toast {
   position: fixed;

@@ -24,3 +24,20 @@ pnpm tauri dev
 ```bash
 pnpm tauri build
 ```
+
+## 平台支持
+
+- ◆ Windows 10/11（x86_64 · ARM64）
+- ◆ macOS 11+（Intel · Apple Silicon，DMG）
+- ◆ Linux（x86_64 · ARM64，AppImage · deb · rpm）
+- ◆ Android（APK）
+- ◆ iOS（IPA，需自行签名）
+
+## 自动化发布
+
+推送标签 `v*` 即可触发 GitHub Actions 自动构建全平台产物并发布 Release：
+
+```bash
+git tag v0.0.1
+git push origin v0.0.1
+```

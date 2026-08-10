@@ -1,5 +1,6 @@
 mod metadata;
 mod stream;
+mod update;
 
 use anyhow::Result;
 use metadata::AudioMetadata;
@@ -165,6 +166,17 @@ async fn open_external(app: tauri::AppHandle, url: String) -> Result<(), String>
     Ok(())
 }
 
+#[tauri::command]
+async fn check_update() -> Result<update::UpdateInfo, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let version = env!("CARGO_PKG_VERSION").to_string();
+        update::check_update(&version)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
 fn urlencoding(s: &str) -> String {
     let mut result = String::new();
     for byte in s.bytes() {
@@ -199,6 +211,7 @@ pub fn run() {
             load_lrc,
             scan_folder,
             open_external,
+            check_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

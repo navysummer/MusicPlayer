@@ -16,7 +16,7 @@ log = "0.4"
 env_logger = "0.11"
 lofty = { version = "0.22", features = ["id3v2_compression_support"] }
 base64 = "0.22"
-uuid = { version = "1", features = ["v4"] }
+ureq = { version = "2", features = ["json"] }
 
 [lib]
 name = "music_player_lib"

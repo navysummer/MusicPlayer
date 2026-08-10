@@ -1,5 +1,7 @@
 <script setup>
+import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 
 defineProps({
   open: { type: Boolean, default: false },
@@ -11,11 +13,53 @@ const links = [
   { icon: "博", label: "博客", href: "https://www.cnblogs.com/navysummer", sub: "cnblogs.com/navysummer" },
 ];
 
+const currentVersion = ref("0.0.1");
+const checking = ref(false);
+const checkResult = ref(null);
+
+onMounted(async () => {
+  try {
+    const v = await getVersion();
+    currentVersion.value = v.replace(/^v/, "");
+  } catch {
+    currentVersion.value = "0.0.1";
+  }
+});
+
 async function openExternal(url) {
   try {
     await invoke("open_external", { url });
   } catch {
     window.open(url, "_blank");
+  }
+}
+
+async function checkForUpdate() {
+  checking.value = true;
+  checkResult.value = null;
+  try {
+    const res = await invoke("check_update");
+    checkResult.value = {
+      type: res.has_update ? "update" : res.has_release ? "ok" : "none",
+      latestVersion: res.latest_version,
+      url: res.url,
+      message: "",
+    };
+  } catch (err) {
+    checkResult.value = {
+      type: "err",
+      latestVersion: "",
+      url: "",
+      message: typeof err === "string" ? err : String(err),
+    };
+  } finally {
+    checking.value = false;
+  }
+}
+
+function goDownload() {
+  if (checkResult.value && checkResult.value.url) {
+    openExternal(checkResult.value.url);
   }
 }
 </script>
@@ -46,6 +90,31 @@ async function openExternal(url) {
             <li>静谧省心：即点即放，无需额外安装任何环境。</li>
             <li>体贴细节：倍速、音量、进度、歌词、列表、拖曳任意快件。</li>
           </ul>
+        </div>
+
+        <div class="about-divider"></div>
+
+        <div class="about-section">
+          <h4>版本</h4>
+          <div class="update-row">
+            <span class="version-tag">当前版本 v{{ currentVersion }}</span>
+            <button class="update-btn" @click="checkForUpdate" :disabled="checking">
+              <span v-if="checking" class="mini-spinner"></span>
+              {{ checking ? "检查中…" : "检查更新" }}
+            </button>
+          </div>
+          <div v-if="checkResult" class="update-result" :class="checkResult.type">
+            <template v-if="checkResult.type === 'update'">
+              <p>发现新版本 v{{ checkResult.latestVersion }}，是否前往下载？</p>
+              <div class="update-actions">
+                <button class="primary" @click="goDownload">前往下载</button>
+                <button class="ghost" @click="checkResult = null">知道了</button>
+              </div>
+            </template>
+            <p v-else-if="checkResult.type === 'ok'">当前已是最新版本，无需更新。</p>
+            <p v-else-if="checkResult.type === 'none'">仓库暂无发布版本，敬请期待。</p>
+            <p v-else>{{ checkResult.message }}</p>
+          </div>
         </div>
 
         <div class="about-divider"></div>
