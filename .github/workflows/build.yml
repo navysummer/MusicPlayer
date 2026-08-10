@@ -1,0 +1,288 @@
+name: Build & Release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  NODE_VERSION: "22"
+
+jobs:
+  # ── Desktop builds (Windows / macOS / Linux, x64 + arm64) ──────
+  desktop:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            label: Linux x86_64
+
+          - os: ubuntu-24.04
+            target: aarch64-unknown-linux-gnu
+            label: Linux ARM64
+            bundles: deb,rpm
+
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            label: macOS x86_64
+
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: macOS ARM64
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: Windows x86_64
+
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            label: Windows ARM64
+
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ contains(matrix.label, 'ARM64') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Enable pnpm
+        shell: bash
+        run: corepack enable pnpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.target }}
+          save-always: true
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -yqq \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            patchelf libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+
+      - name: Install Linux ARM64 cross-compilation tools
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get install -yqq gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo dpkg --add-architecture arm64
+          printf '%s\n' \
+            "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble main universe" \
+            "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-updates main universe" \
+            "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports noble-security main universe" \
+            | sudo tee /etc/apt/sources.list.d/arm64.list > /dev/null
+          sudo apt-get update -qq || true
+          sudo apt-get -o Dpkg::Options::="--force-overwrite" install -yqq \
+            libwebkit2gtk-4.1-dev:arm64 libgtk-3-dev:arm64 \
+            libsoup-3.0-dev:arm64 libjavascriptcoregtk-4.1-dev:arm64 \
+            librsvg2-dev:arm64 libayatana-appindicator3-dev:arm64
+
+      - name: Install JS dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Build with Tauri
+        shell: bash
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
+          PKG_CONFIG_ALLOW_CROSS: "1"
+          PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          if [ -n "${{ matrix.bundles }}" ]; then
+            pnpm tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+          else
+            pnpm tauri build --target ${{ matrix.target }}
+          fi
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: target/${{ matrix.target }}/release/bundle/
+          if-no-files-found: warn
+
+  # ── Android build ───────────────────────────────────────────────
+  android:
+    name: Android APK
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Enable pnpm
+        shell: bash
+        run: corepack enable pnpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -yqq \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev \
+            patchelf libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install JS dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Android APK
+        shell: bash
+        run: |
+          pnpm tauri android init
+          pnpm tauri android build --apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android
+          path: src-tauri/gen/android/app/build/outputs/apk/**
+
+  # ── iOS build ───────────────────────────────────────────────────
+  ios:
+    name: iOS IPA
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Enable pnpm
+        shell: bash
+        run: corepack enable pnpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install JS dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Build iOS (no signing)
+        shell: bash
+        run: |
+          pnpm tauri ios init
+          pnpm tauri ios build --no-sign
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS
+          path: src-tauri/gen/apple/build/
+
+  # ── Release (only on tag push) ──────────────────────────────────
+  release:
+    name: Upload to Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, android, ios]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organize release files
+        run: |
+          mkdir -p release
+          for dir in artifacts/*/; do
+            label="$(basename "$dir")"
+            case "$label" in
+              "Linux x86_64")   prefix="linux-amd64" ;;
+              "Linux ARM64")    prefix="linux-arm64" ;;
+              "macOS x86_64")   prefix="macos-x64" ;;
+              "macOS ARM64")    prefix="macos-arm64" ;;
+              "Windows x86_64") prefix="windows-x64" ;;
+              "Windows ARM64")  prefix="windows-arm64" ;;
+              "Android")        prefix="android" ;;
+              "iOS")            prefix="ios" ;;
+              *)                prefix="$label" ;;
+            esac
+            case "$label" in
+              Linux*)
+                find "$dir" -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) \
+                  -exec sh -c 'cp "$1" "release/$2-$(basename "$1")"' _ {} "$prefix" \; ;;
+              macOS*)
+                find "$dir" -type f -name "*.dmg" \
+                  -exec sh -c 'cp "$1" "release/$2-$(basename "$1")"' _ {} "$prefix" \; ;;
+              Windows*)
+                find "$dir" -type f \( -name "*.msi" -o -name "*.exe" \) \
+                  -exec sh -c 'cp "$1" "release/$2-$(basename "$1")"' _ {} "$prefix" \; ;;
+              Android*)
+                find "$dir" -type f -name "*.apk" -exec cp {} "release/android.apk" \; ;;
+              iOS*)
+                find "$dir" -type f -name "*.ipa" -exec cp {} "release/ios.ipa" \; ;;
+            esac
+          done
+          ls -la release/
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
+          fail_on_unmatched_files: false
