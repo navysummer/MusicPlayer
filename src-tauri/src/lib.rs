@@ -6,6 +6,7 @@ use anyhow::Result;
 use metadata::AudioMetadata;
 use serde::Serialize;
 use std::sync::Mutex;
+#[cfg(desktop)]
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
