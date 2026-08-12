@@ -254,34 +254,33 @@ jobs:
       - name: Organize release files
         run: |
           mkdir -p release
+          VERSION="$(jq -r .version src-tauri/tauri.conf.json)"
           for dir in artifacts/*/; do
             label="$(basename "$dir")"
             case "$label" in
-              "Linux x86_64")   prefix="linux-amd64" ;;
-              "Linux ARM64")    prefix="linux-arm64" ;;
-              "macOS x86_64")   prefix="macos-x64" ;;
-              "macOS ARM64")    prefix="macos-arm64" ;;
-              "Windows x86_64") prefix="windows-x64" ;;
-              "Windows ARM64")  prefix="windows-arm64" ;;
-              "Android")        prefix="android" ;;
-              "iOS")            prefix="ios" ;;
-              *)                prefix="$label" ;;
+              "Linux x86_64")   system="linux"   ; arch="amd64" ;;
+              "Linux ARM64")    system="linux"   ; arch="arm64" ;;
+              "macOS x86_64")   system="macos"   ; arch="x64" ;;
+              "macOS ARM64")    system="macos"   ; arch="arm64" ;;
+              "Windows x86_64") system="windows" ; arch="x64" ;;
+              "Windows ARM64")  system="windows" ; arch="arm64" ;;
+              "Android")        system="android" ; arch="" ;;
+              "iOS")            system="ios"     ; arch="" ;;
+              *)                system="$label"  ; arch="" ;;
             esac
-            case "$label" in
-              Linux*)
-                find "$dir" -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) \
-                  -exec sh -c 'cp "$1" "release/$2-$(basename "$1")"' _ {} "$prefix" \; ;;
-              macOS*)
-                find "$dir" -type f -name "*.dmg" \
-                  -exec sh -c 'cp "$1" "release/$2-$(basename "$1")"' _ {} "$prefix" \; ;;
-              Windows*)
-                find "$dir" -type f \( -name "*.msi" -o -name "*.exe" \) \
-                  -exec sh -c 'cp "$1" "release/$2-$(basename "$1")"' _ {} "$prefix" \; ;;
-              Android*)
-                find "$dir" -type f -name "*.apk" -exec cp {} "release/android.apk" \; ;;
-              iOS*)
-                find "$dir" -type f -name "*.ipa" -exec cp {} "release/ios.ipa" \; ;;
-            esac
+            if [ -n "$arch" ]; then
+              base="music-player-${VERSION}-${system}-${arch}"
+            else
+              base="music-player-${VERSION}-${system}"
+            fi
+            find "$dir" -type f \
+              \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \
+                 -o -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \
+                 -o -name "*.apk" -o -name "*.ipa" \) -print0 |
+              while IFS= read -r -d '' f; do
+                ext="${f##*.}"
+                cp "$f" "release/${base}.${ext}"
+              done
           done
           ls -la release/
 
